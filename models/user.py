@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import Dict, Any
 
 
 class User(BaseModel):
@@ -10,4 +10,4 @@ class User(BaseModel):
     password: str
     gender: str
     mobile_no: str
-    vaccines: List[str] = []
+    vaccines: Dict[str, Any] = []

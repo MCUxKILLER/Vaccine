@@ -1,3 +1,4 @@
+import json
 from fastapi import FastAPI, HTTPException, status
 
 
@@ -69,3 +70,28 @@ async def get_vaccine(vaccine):
 @app.get("/price/{company}/{vaccine}")
 async def get_price(company, vaccine):
     return conn.CoVacMis.Company.find_one({"Company": company})["vaccines"][vaccine]
+
+
+@app.post("/vaccinate")
+async def vaccinate(body):
+    # Body -> username, vaccine_name, date_of_vaccination
+    #   vaccine_name -> { dose_count: 1, date: 27-05-2018}
+    body = json.loads(body)
+    vaccine_name = body["name"]
+    username = body["username"]
+    date_of_vaccination = body.get("date", "-")
+
+    vaccines = conn.CoVacMis.users.find_one({"username": username})["vaccines"]
+    if (vaccines.get(vaccine_name, False)):
+        vaccine = vaccines[vaccine_name]
+        vaccine["dose_count"] = vaccine.get("dose_count", 0) + 1
+        vaccine["date_of_vaccination"] = date_of_vaccination
+    else:
+        vaccines[vaccine_name] = {
+            "dose_count": 1,
+            "date_of_vaccination": date_of_vaccination
+        }
+    
+    conn.CoVacMis.users.update_one({"username": username}, {"$set": {"vaccines": vaccines}})
+
+    return 1
