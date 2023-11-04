@@ -68,6 +68,4 @@ async def get_vaccine(vaccine):
 
 @app.get("/price/{company}/{vaccine}")
 async def get_price(company, vaccine):
-    print(unquote(company))
-    print(unquote(vaccine))
     return conn.CoVacMis.Company.find_one({"Company": company})["vaccines"][vaccine]
