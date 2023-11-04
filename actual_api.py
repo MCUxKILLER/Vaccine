@@ -48,15 +48,11 @@ async def get_vaccines_list():
     # vaccines = []
     vaccines = {}
     for doc in conn.CoVacMis.Vaccine.find():
-        # vaccines.append({
-        #     "name": doc["name"],
-        #     "Age_group": doc["Age_group"],
-        # })
-        # vaccines[doc["name"]] = {
-        #     "Age_group": doc["Age_group"],
-        #     "dose_count": doc["dose_count"],
-        # }
-        vaccines[doc["name"]] = doc["Age_group"]
+        vaccines[doc["name"]] = {
+            "Age_group": doc["Age_group"],
+            "dose_count": doc["dose_count"],
+        }
+        # vaccines[doc["name"]] = doc["Age_group"]
     return vaccines
 
 
