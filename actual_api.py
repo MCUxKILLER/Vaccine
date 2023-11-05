@@ -6,6 +6,8 @@ from models.user import User
 from config.db import conn
 from urllib.parse import unquote
 
+from models.vaccination import Vaccination
+
 app = FastAPI()
 
 
@@ -73,13 +75,13 @@ async def get_price(company, vaccine):
 
 
 @app.post("/vaccinate")
-async def vaccinate(body):
+async def vaccinate(body:Vaccination):
     # Body -> username, vaccine_name, date_of_vaccination
     #   vaccine_name -> { dose_count: 1, date: 27-05-2018}
-    body = json.loads(body)
-    vaccine_name = body["name"]
-    username = body["username"]
-    date_of_vaccination = body.get("date", "-")
+    # body = json.loads(name)
+    vaccine_name = body.name
+    username = body.username
+    date_of_vaccination = body.date_of_vaccination
 
     vaccines = conn.CoVacMis.users.find_one({"username": username})["vaccines"]
     if (vaccines.get(vaccine_name, False)):
@@ -94,4 +96,4 @@ async def vaccinate(body):
     
     conn.CoVacMis.users.update_one({"username": username}, {"$set": {"vaccines": vaccines}})
 
-    return 1
+    return {"success":1}
