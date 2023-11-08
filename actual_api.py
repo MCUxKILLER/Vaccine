@@ -75,7 +75,7 @@ async def get_price(company, vaccine):
 
 
 @app.post("/vaccinate")
-async def vaccinate(body:Vaccination):
+async def vaccinate(body: Vaccination):
     # Body -> username, vaccine_name, date_of_vaccination
     #   vaccine_name -> { dose_count: 1, date: 27-05-2018}
     # body = json.loads(name)
@@ -84,16 +84,29 @@ async def vaccinate(body:Vaccination):
     date_of_vaccination = body.date_of_vaccination
 
     vaccines = conn.CoVacMis.users.find_one({"username": username})["vaccines"]
-    if (vaccines.get(vaccine_name, False)):
+    if vaccines.get(vaccine_name, False):
         vaccine = vaccines[vaccine_name]
         vaccine["dose_count"] = vaccine.get("dose_count", 0) + 1
         vaccine["date_of_vaccination"] = date_of_vaccination
     else:
         vaccines[vaccine_name] = {
             "dose_count": 1,
-            "date_of_vaccination": date_of_vaccination
+            "date_of_vaccination": date_of_vaccination,
         }
-    
-    conn.CoVacMis.users.update_one({"username": username}, {"$set": {"vaccines": vaccines}})
 
-    return {"success":1}
+    conn.CoVacMis.users.update_one(
+        {"username": username}, {"$set": {"vaccines": vaccines}}
+    )
+
+    return {"success": 1}
+
+
+@app.get("/hospital/login/{hospitalName}/{password}")
+async def hospitalLogin(hospitalName: str, password: str):
+    hospitalDetail = conn.CoVacMis.Hospital.find_one(
+        {"hospitalName": hospitalName, "password": password}
+    )
+    return {
+        "hospitalId": str(hospitalDetail["_id"]),
+        "hospitalName": hospitalDetail["hospitalName"],
+    }
