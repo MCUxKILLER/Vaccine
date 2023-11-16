@@ -110,3 +110,9 @@ async def hospitalLogin(hospitalName: str, password: str):
         "hospitalId": str(hospitalDetail["_id"]),
         "hospitalName": hospitalDetail["hospitalName"],
     }
+
+
+@app.get("/hospital/getOrders/{hospitalName}")
+async def retrieveOrders(hospitalName: str):
+    allOrders = conn.CoVacMis.Hospital.find_one({"hospitalName": hospitalName})["userOrder"]
+    return allOrders
