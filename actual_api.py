@@ -1,5 +1,6 @@
 import json
 from fastapi import FastAPI, HTTPException, status
+from datetime import datetime
 
 
 from models.user import User
@@ -115,4 +116,14 @@ async def hospitalLogin(hospitalName: str, password: str):
 @app.get("/hospital/getOrders/{hospitalName}")
 async def retrieveOrders(hospitalName: str):
     allOrders = conn.CoVacMis.Hospital.find_one({"hospitalName": hospitalName})["userOrder"]
-    return allOrders
+    date_format = "%d-%m-%Y"
+    orders = {}
+    current_date = datetime.now().date()
+    print(current_date)
+    for i in allOrders.keys():
+        print(i)
+        parsed_date = datetime.strptime(i,date_format).date()
+        print(parsed_date)
+        if parsed_date == current_date:
+            orders[i] = allOrders[i]
+    return orders
