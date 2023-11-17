@@ -119,11 +119,11 @@ async def retrieveOrders(hospitalName: str):
     date_format = "%d-%m-%Y"
     orders = {}
     current_date = datetime.now().date()
-    print(current_date)
+    # print(current_date)
     for i in allOrders.keys():
-        print(i)
+        # print(i)
         parsed_date = datetime.strptime(i,date_format).date()
-        print(parsed_date)
+        # print(parsed_date)
         if parsed_date == current_date:
             orders[i] = allOrders[i]
     return orders
