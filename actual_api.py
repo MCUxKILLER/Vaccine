@@ -123,7 +123,7 @@ async def retrieveOrders(hospitalName: str):
     date_format = "%d-%m-%Y"
     IST = pytz.timezone('Asia/Kolkata')
     orders = {}
-    current_date = datetime.now().date()
+    current_date = datetime.now(IST).date()
     # print(current_date)
     for i in allOrders.keys():
         # print(i)
