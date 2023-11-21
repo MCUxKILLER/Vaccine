@@ -9,6 +9,7 @@ from urllib.parse import unquote
 
 from models.vaccination import Vaccination
 from models.hospital import Hospitals
+import pytz
 
 app = FastAPI()
 
@@ -120,6 +121,7 @@ async def retrieveOrders(hospitalName: str):
         "userOrder"
     ]
     date_format = "%d-%m-%Y"
+    IST = pytz.timezone('Asia/Kolkata')
     orders = {}
     current_date = datetime.now().date()
     # print(current_date)
