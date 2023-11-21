@@ -3,6 +3,9 @@ from typing import List,Dict,Any
 
 class Hospitals(BaseModel):
     hospitalName:str
-    location : list(str)=[]
+    location : List[str]
     password:str
-    userOrder:List(Dict[str,Any])=[]
+    userOrder:Dict[str,Dict[str,str]] = {}
+    mob:str
+    address:str
+    fullAddr:str

@@ -8,6 +8,7 @@ from config.db import conn
 from urllib.parse import unquote
 
 from models.vaccination import Vaccination
+from models.hospital import Hospitals
 
 app = FastAPI()
 
@@ -115,15 +116,124 @@ async def hospitalLogin(hospitalName: str, password: str):
 
 @app.get("/hospital/getOrders/{hospitalName}")
 async def retrieveOrders(hospitalName: str):
-    allOrders = conn.CoVacMis.Hospital.find_one({"hospitalName": hospitalName})["userOrder"]
+    allOrders = conn.CoVacMis.Hospital.find_one({"hospitalName": hospitalName})[
+        "userOrder"
+    ]
     date_format = "%d-%m-%Y"
     orders = {}
     current_date = datetime.now().date()
     # print(current_date)
     for i in allOrders.keys():
         # print(i)
-        parsed_date = datetime.strptime(i,date_format).date()
+        parsed_date = datetime.strptime(i, date_format).date()
         # print(parsed_date)
         if parsed_date == current_date:
             orders[i] = allOrders[i]
     return orders
+
+
+@app.post("/user/order/")
+async def placeOrder(body: dict):
+    # username, vaccine_name, date, hospital_name
+
+    username = body["username"]
+    vaccine_name = body["vaccine_name"]
+    date = body["date"]
+    hospital_name = body["hospital_name"]
+    brand_name = body["brand_name"]
+    company_name = body["company_name"]
+
+    hospital = conn.CoVacMis.Hospital.find_one({"hospitalName": hospital_name})
+    orders = hospital["userOrder"].get(date, {})
+
+    if username in orders:
+        return {
+            "message": "You have already ordered a vaccine on this date",
+            "success": 0,
+        }
+
+    orders[username] = {
+        "vaccine_name": vaccine_name,
+        "company_name": company_name,
+        "brand_name": brand_name,
+    }
+
+    conn.CoVacMis.Hospital.update_one(
+        {"hospitalName": hospital_name},
+        {"$set": {f"userOrder.{date}": orders}},
+    )
+
+    return {
+        "message": "You successfully placed the order.",
+        "success": 1,
+        "orders": orders,
+    }
+
+
+# {
+# "username": "abc",
+# "date": "19-11-2003",
+# "vaccine_name": "ebola",
+# "hospital_name": "NUPUR HOSPITAL"
+# }
+
+
+@app.post("/hospital/create")
+async def hospitalSignUp(body: Hospitals):
+    # username,password,latitude,longitude,address,mobilenumber
+    # return print(body.hospitalName,body.address)
+    hospitals = conn.CoVacMis.Hospital.find_one(
+        {"$and": [{"hospitalName": body.hospitalName}, {"address": body.address}]}
+    )
+    if hospitals:
+        return {"success": 0, "hospitalId": "0", "hospitalName": "0"}
+    conn.CoVacMis.Hospital.insert_one(dict(body))
+    hospitalId = conn.CoVacMis.Hospital.find_one({"hospitalName": body.hospitalName})[
+        "_id"
+    ]
+    hospitalId = str(hospitalId)
+    return {"success": 1, "hospitalId": hospitalId, "hospitalName": body.hospitalName}
+
+
+@app.post("/hospital/orderComplete")
+async def hospitalOrderComplete(body: dict):
+    hospitalName = body["hospitalName"]
+    date = body["date"]
+    username = body["username"]
+
+    hospital = conn.CoVacMis.Hospital.find_one({"hospitalName": hospitalName})
+    orders = hospital["userOrder"][date]
+    vaccine_order = orders[username]
+    orders.pop(username)
+
+    user_vaccine_data = conn.CoVacMis.users.find_one(
+        {"username": username})["vaccines"]
+    user_doses = user_vaccine_data.get(vaccine_order["vaccine"], {"dose_count": 0})[
+        "dose_count"
+    ]
+
+    user_vaccination = {"dose_count": user_doses +
+                        1, "date_of_vaccination": date}
+
+    conn.CoVacMis.Hospital.update_one(
+        {"hospitalName": hospitalName},
+        {"$set": {f"userOrder.{date}": orders}},
+    )
+    conn.CoVacMis.users.update_one(
+        {"username": username},
+        {"$set": {f"vaccines.{vaccine_order['vaccine']}": user_vaccination}},
+    )
+    return {"success": 1}
+    # {"hospitalName":"NUPUR HOSPITAL","date":"19-11-2023","username":"xyz123"}
+
+
+@app.get("/hospital/getData")
+async def getHospitalData():
+    hospitals = {}
+    for doc in conn.CoVacMis.Hospital.find():
+        hospitals[str(doc["_id"])] = {
+            "hospitalName": doc["hospitalName"],
+            "location": doc["location"],
+            "address": doc["address"],
+        }
+    return hospitals
