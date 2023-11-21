@@ -22,10 +22,15 @@ async def find_all_user():
 
 @app.post("/create")
 async def create_user(user: User):
+
+    a = conn.CoVacMis.users.find_one({"username": user.username})
+    if a is not None:
+        return {
+            "message": "Username already taken"
+        }
     conn.CoVacMis.users.insert_one(dict(user))
     return {
-        "message": "User created successfully",
-        "username": user.username,
+        "message": "User created successfully"
     }
 
 
