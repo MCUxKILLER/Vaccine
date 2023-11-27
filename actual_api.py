@@ -152,17 +152,12 @@ async def placeOrder(body: dict):
 
     user_orders = conn.CoVacMis.users.find_one({"username": username})["orders"]
     if user_orders.get(vaccine_name) is None:
-        user_orders.set(vaccine_name, {
+        user_orders[vaccine_name] = {
             "company_name": company_name,
             "brand_name": brand_name,
             "hospital_name": hospital_name,
             "date": date,
-        })
-
-        conn.CoVacMis.users.update_one(
-            {"username": username},
-            {"$set": {"orders": user_orders}},
-        )
+        }
     else:
         return {
             "message": "You have already ordered this vaccine",
@@ -186,24 +181,30 @@ async def placeOrder(body: dict):
         "brand_name": brand_name,
     }
 
-    conn.CoVacMis.Hospital.update_one(
-        {"hospitalName": hospital_name},
-        {"$set": {f"userOrder.{date}": orders}},
-    )
+    try:
+        with conn.start_session() as session:
+            with session.start_transaction():
+                conn.CoVacMis.users.update_one(
+                    {"username": username},
+                    {"$set": {"orders": user_orders}},
+                )
+
+                conn.CoVacMis.Hospital.update_one(
+                    {"hospitalName": hospital_name},
+                    {"$set": {f"userOrder.{date}": orders}},
+                )
+    except Exception as e:
+        print(e)
+        return {
+            "success": 0,
+            "message": "Something went wrong",
+            "error": str(e)
+        }
 
     return {
         "message": "You successfully placed the order.",
-        "success": 1,
-        "orders": orders,
+        "success": 1
     }
-
-
-# {
-# "username": "abc",
-# "date": "19-11-2003",
-# "vaccine_name": "ebola",
-# "hospital_name": "NUPUR HOSPITAL"
-# }
 
 
 @app.post("/hospital/create")
@@ -234,23 +235,33 @@ async def hospitalOrderComplete(body: dict):
     vaccine_order = orders[username]
     orders.pop(username)
 
-    user_vaccine_data = conn.CoVacMis.users.find_one(
-        {"username": username})["vaccines"]
-    user_doses = user_vaccine_data.get(vaccine_order["vaccine"], {"dose_count": 0})[
-        "dose_count"
-    ]
+    user = conn.CoVacMis.users.find_one({"username": username})
+    user_doses = user["vaccines"].get(vaccine_order["vaccine_name"], {"dose_count": 0})["dose_count"]
+    vaccine_name = vaccine_order.get("vaccine_name")
+    user["orders"].pop(vaccine_name)
 
-    user_vaccination = {"dose_count": user_doses +
-                        1, "date_of_vaccination": date}
+    user_vaccination = {"dose_count": user_doses + 1, "date_of_vaccination": date}
 
-    conn.CoVacMis.Hospital.update_one(
-        {"hospitalName": hospitalName},
-        {"$set": {f"userOrder.{date}": orders}},
-    )
-    conn.CoVacMis.users.update_one(
-        {"username": username},
-        {"$set": {f"vaccines.{vaccine_order['vaccine']}": user_vaccination}},
-    )
+    try:
+        with conn.start_session() as session:
+            with session.start_transaction():
+                conn.CoVacMis.Hospital.update_one(
+                    {"hospitalName": hospitalName},
+                    {"$set": {f"userOrder.{date}": orders}},
+                )
+                conn.CoVacMis.users.update_one(
+                    {"username": username},
+                    {"$set": {f"vaccines.{vaccine_order['vaccine_name']}": user_vaccination, "orders": user["orders"]}},
+                )
+    except Exception as e:
+        print(e)
+        return {
+            "success": 0,
+            "message": "Something went wrong",
+            "error": str(e)
+        }
+
+
     return {"success": 1}
     # {"hospitalName":"NUPUR HOSPITAL","date":"19-11-2023","username":"xyz123"}
 
@@ -265,3 +276,19 @@ async def getHospitalData():
             "address": doc["address"],
         }
     return hospitals
+
+
+@app.get("/user/orders/{username}")
+async def getUserOrders(username: str):
+    orders = conn.CoVacMis.users.find_one({"username": username})["orders"]
+
+    if len(orders):
+        return {
+            "orders": orders,
+            "success": 1
+        }
+    else:
+        return {
+            "orders": {},
+            "success": 0
+        }
