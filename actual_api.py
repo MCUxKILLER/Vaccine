@@ -150,6 +150,26 @@ async def placeOrder(body: dict):
     brand_name = body["brand_name"]
     company_name = body["company_name"]
 
+    user_orders = conn.CoVacMis.users.find_one({"username": username})["orders"]
+    if user_orders.get(vaccine_name) is None:
+        user_orders.set(vaccine_name, {
+            "company_name": company_name,
+            "brand_name": brand_name,
+            "hospital_name": hospital_name,
+            "date": date,
+        })
+
+        conn.CoVacMis.users.update_one(
+            {"username": username},
+            {"$set": {"orders": user_orders}},
+        )
+    else:
+        return {
+            "message": "You have already ordered this vaccine",
+            "success": 0,
+            "vaccine_info": user_orders.get(vaccine_name),
+        }
+
     hospital = conn.CoVacMis.Hospital.find_one({"hospitalName": hospital_name})
     orders = hospital["userOrder"].get(date, {})
 
@@ -157,6 +177,7 @@ async def placeOrder(body: dict):
         return {
             "message": "You have already ordered a vaccine on this date",
             "success": 0,
+            "vaccine_info": orders[username],
         }
 
     orders[username] = {
