@@ -10,4 +10,5 @@ class User(BaseModel):
     password: str
     gender: str
     mobile_no: str
-    vaccines: Dict[str, Any] = {}
+    vaccines: Dict[str, Dict[str,str]] = {}
+    orders: Dict[str, Dict[str,str]] = {}
