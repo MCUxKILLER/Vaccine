@@ -292,3 +292,8 @@ async def getUserOrders(username: str):
             "orders": {},
             "success": 0
         }
+@app.get("/user/comVaccines/{username}")
+async def getCompletedVaccines(username: str):
+    vaccines = conn.CoVacMis.users.find_one({"username": username})["vaccines"]
+    
+    return vaccines
